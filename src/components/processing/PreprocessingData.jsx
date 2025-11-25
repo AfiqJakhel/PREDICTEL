@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   FiRefreshCw,
@@ -11,6 +11,7 @@ import {
   FiFilter,
   FiTarget,
   FiZap,
+  FiScissors,
 } from "react-icons/fi";
 import {
   preprocessData,
@@ -22,14 +23,13 @@ import { useData } from "../../hooks/useData";
 import CustomSelect from "../ui/CustomSelect";
 
 function PreprocessingData() {
-  const { csvData, setCsvData } = useData();
-  const [processedData, setProcessedData] = useState(null);
+  const { csvData, setCsvData, analysisResult, setActiveTab, processedData: contextProcessedData, setProcessedData: setContextProcessedData } = useData();
+  const [processedData, setProcessedData] = useState(contextProcessedData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [options, setOptions] = useState({
     handle_missing: "",
     label_encode: false,
-    scale: "",
   });
   const [selectedColumn, setSelectedColumn] = useState("");
   const [outliers, setOutliers] = useState(null);
@@ -47,11 +47,31 @@ function PreprocessingData() {
     );
   }
 
-  // Use identified numerical features if available, otherwise use all columns
-  // Backend will validate if column is numeric
-  const numericColumns = numericalFeatures.length > 0 
-    ? numericalFeatures 
-    : csvData.columns;
+  // Get numeric columns from analysis result (numeric_summary keys)
+  // Priority: 1. Analysis result numeric columns, 2. Identified features, 3. Empty array (no fallback to all columns)
+  const numericColumnsFromAnalysis = analysisResult?.numeric_summary 
+    ? Object.keys(analysisResult.numeric_summary)
+    : [];
+  
+  const numericColumns = numericColumnsFromAnalysis.length > 0
+    ? numericColumnsFromAnalysis
+    : numericalFeatures.length > 0 
+      ? numericalFeatures 
+      : [];
+
+  // Reset selected column if it's not in the numeric columns list
+  useEffect(() => {
+    if (selectedColumn && numericColumns.length > 0 && !numericColumns.includes(selectedColumn)) {
+      setSelectedColumn("");
+    }
+  }, [numericColumns, selectedColumn]);
+
+  // Load processed data from context when component mounts
+  useEffect(() => {
+    if (contextProcessedData) {
+      setProcessedData(contextProcessedData);
+    }
+  }, [contextProcessedData]);
 
   const handleDetectOutliers = async () => {
     if (!selectedColumn || !csvData?.filename) return;
@@ -77,6 +97,17 @@ function PreprocessingData() {
     try {
       const result = await preprocessData(csvData.filename, options);
       setProcessedData(result);
+      // Save to context to persist across navigation
+      setContextProcessedData(result);
+      // Update data di context agar perubahan tersimpan
+      if (result.preview && result.columns) {
+        setCsvData({
+          ...csvData,
+          columns: result.columns,
+          preview: result.preview,
+          total_rows: result.processed_shape?.rows || csvData.total_rows,
+        });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -216,15 +247,27 @@ function PreprocessingData() {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Pilih Kolom Numerik
             </label>
-            <CustomSelect
-              value={selectedColumn}
-              onChange={setSelectedColumn}
-              options={[
-                { value: "", label: "Pilih kolom..." },
-                ...numericColumns.map((col) => ({ value: col, label: col })),
-              ]}
-              placeholder="Pilih kolom..."
-            />
+            {numericColumns.length === 0 ? (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+                <p className="text-sm text-amber-800">
+                  <strong>⚠️ Belum ada kolom numerik terdeteksi.</strong>
+                  <br />
+                  <span className="text-xs">
+                    Silakan lakukan <strong>Analisis Data</strong> di tab sebelumnya untuk mengidentifikasi kolom numerik.
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <CustomSelect
+                value={selectedColumn}
+                onChange={setSelectedColumn}
+                options={[
+                  { value: "", label: "Pilih kolom..." },
+                  ...numericColumns.map((col) => ({ value: col, label: col })),
+                ]}
+                placeholder="Pilih kolom..."
+              />
+            )}
           </div>
           <button
             onClick={handleDetectOutliers}
@@ -548,9 +591,9 @@ function PreprocessingData() {
         )}
       </motion.div>
 
-      {/* Label Encoding & Scaling */}
+      {/* Label Encoding */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        className="grid grid-cols-1 gap-6"
         variants={containerVariants}
       >
         {/* Label Encoding */}
@@ -572,55 +615,24 @@ function PreprocessingData() {
               <p className="text-xs text-gray-500">Encode fitur kategorikal</p>
             </div>
           </div>
-          <label className="flex items-center gap-3 p-4 bg-cyan-50 rounded-xl border-2 border-cyan-200 cursor-pointer hover:bg-cyan-100 transition-colors">
-            <input
-              type="checkbox"
-              checked={options.label_encode}
-              onChange={(e) =>
-                setOptions({ ...options, label_encode: e.target.checked })
-              }
-              className="w-5 h-5 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
-            />
-            <span className="text-sm font-medium text-gray-700">
-              Aktifkan Label Encoding
-            </span>
-          </label>
-        </motion.div>
-
-        {/* Scaling */}
-        <motion.div
-          className="bg-white/80 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 p-6 hover:shadow-3xl transition-all duration-300"
-          variants={itemVariants}
-          whileHover={{ scale: 1.02, y: -2 }}
-          style={{
-            boxShadow:
-              "0 8px 32px 0 rgba(6, 182, 212, 0.15), 0 2px 8px 0 rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.8)",
-          }}
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
-              <FiTarget className="text-white text-lg" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Scaling</h3>
-              <p className="text-xs text-gray-500">Normalisasi data numerik</p>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Pilih Metode Scaling
-            </label>
-            <div className="relative">
-              <CustomSelect
-                value={options.scale}
-                onChange={(value) => setOptions({ ...options, scale: value })}
-                options={[
-                  { value: "", label: "Tidak ada scaling" },
-                  { value: "standard", label: "Standard Scaler" },
-                  { value: "minmax", label: "MinMax Scaler" },
-                ]}
-                placeholder="Tidak ada scaling"
+          <div className="space-y-3">
+            <label className="flex items-center gap-3 p-4 bg-cyan-50 rounded-xl border-2 border-cyan-200 cursor-pointer hover:bg-cyan-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={options.label_encode}
+                onChange={(e) =>
+                  setOptions({ ...options, label_encode: e.target.checked })
+                }
+                className="w-5 h-5 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
               />
+              <span className="text-sm font-medium text-gray-700">
+                Aktifkan Label Encoding <span className="text-red-500">*WAJIB</span>
+              </span>
+            </label>
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+              <p className="text-xs text-amber-800">
+                <strong>⚠️ Penting:</strong> Label Encoding <strong>WAJIB</strong> diaktifkan untuk mengubah data kategorikal (seperti "Yes"/"No") menjadi numerik. Tanpa ini, training model akan gagal.
+              </p>
             </div>
           </div>
         </motion.div>
@@ -715,6 +727,17 @@ function PreprocessingData() {
               </table>
             </div>
           )}
+
+          {/* Button untuk Navigasi ke Split Data */}
+          <div className="mt-6 flex gap-4">
+            <button
+              onClick={() => setActiveTab("split")}
+              className="flex-1 px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-2xl font-bold text-lg hover:from-cyan-600 hover:to-blue-700 transition-all flex items-center justify-center gap-3 shadow-2xl hover:shadow-3xl transform hover:scale-[1.02]"
+            >
+              <FiScissors className="text-2xl" />
+              Lanjut ke Split Data
+            </button>
+          </div>
         </motion.div>
       )}
     </motion.div>

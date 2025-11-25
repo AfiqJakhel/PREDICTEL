@@ -236,3 +236,109 @@ export async function identifyFeatures(filename, threshold = 6) {
 
   return data.data;
 }
+
+/**
+ * Train Logistic Regression model
+ */
+export async function trainModel(filename) {
+  const res = await fetch("/api/train-model", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filename }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("Failed to parse server response");
+  }
+
+  if (!res.ok || data.error) {
+    const errorMsg = data?.error || "Failed to train model";
+    const details = data?.details ? `\n\nDetails: ${data.details}` : "";
+    throw new Error(errorMsg + details);
+  }
+
+  return data.data;
+}
+
+/**
+ * Predict menggunakan model yang sudah dilatih
+ */
+export async function predict(filename, inputData) {
+  const res = await fetch("/api/predict", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filename, input_data: inputData }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("Failed to parse server response");
+  }
+
+  if (!res.ok || data.error) {
+    throw new Error(data?.error || "Failed to predict");
+  }
+
+  return data.data;
+}
+
+/**
+ * Perform clustering analysis (K-Means or DBSCAN)
+ */
+export async function performClustering(filename, options = {}) {
+  const res = await fetch("/api/clustering", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filename, ...options }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("Failed to parse server response");
+  }
+
+  if (!res.ok || data.error) {
+    throw new Error(data?.error || "Failed to perform clustering");
+  }
+
+  return data.data;
+}
+
+/**
+ * Perform association rules analysis (Apriori)
+ */
+export async function performAssociationRules(filename, options = {}) {
+  const res = await fetch("/api/association-rules", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ filename, ...options }),
+  });
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("Failed to parse server response");
+  }
+
+  if (!res.ok || data.error) {
+    throw new Error(data?.error || "Failed to perform association rules analysis");
+  }
+
+  return data.data;
+}

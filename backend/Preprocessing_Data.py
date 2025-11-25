@@ -48,25 +48,31 @@ def register_routes(app):
                 for col in categorical_cols:
                     df_processed[col] = le.fit_transform(df_processed[col].astype(str))
             
-            # Scaling
-            if options.get('scale') == 'standard':
-                scaler = StandardScaler()
-                numeric_cols = df_processed.select_dtypes(include=[np.number]).columns
-                df_processed[numeric_cols] = scaler.fit_transform(df_processed[numeric_cols])
-            elif options.get('scale') == 'minmax':
-                scaler = MinMaxScaler()
-                numeric_cols = df_processed.select_dtypes(include=[np.number]).columns
-                df_processed[numeric_cols] = scaler.fit_transform(df_processed[numeric_cols])
+            # Scaling - DISABLED untuk menghindari masalah dengan target column
+            # Scaling hanya boleh diterapkan pada feature columns, bukan target column
+            # Untuk sementara dinonaktifkan karena sulit untuk membedakan target column saat preprocessing
+            # if options.get('scale') == 'standard':
+            #     scaler = StandardScaler()
+            #     numeric_cols = df_processed.select_dtypes(include=[np.number]).columns
+            #     df_processed[numeric_cols] = scaler.fit_transform(df_processed[numeric_cols])
+            # elif options.get('scale') == 'minmax':
+            #     scaler = MinMaxScaler()
+            #     numeric_cols = df_processed.select_dtypes(include=[np.number]).columns
+            #     df_processed[numeric_cols] = scaler.fit_transform(df_processed[numeric_cols])
             
-            # Convert NaN to None for JSON
-            df_processed = df_processed.where(pd.notnull(df_processed), None)
+            # Update dataframe in memory dengan data yang sudah diproses
+            from utils import dataframes
+            dataframes[filename] = df_processed
+            
+            # Convert NaN to None for JSON (hanya untuk preview/respons, bukan untuk update memory)
+            df_processed_for_json = df_processed.where(pd.notnull(df_processed), None)
             
             result = {
                 "filename": filename,
                 "original_shape": {"rows": int(df.shape[0]), "columns": int(df.shape[1])},
                 "processed_shape": {"rows": int(df_processed.shape[0]), "columns": int(df_processed.shape[1])},
                 "columns": df_processed.columns.tolist(),
-                "preview": df_processed.head(10).to_dict(orient='records')
+                "preview": df_processed_for_json.head(10).to_dict(orient='records')
             }
             
             return jsonify({"message": "Data preprocessed successfully", "data": result})

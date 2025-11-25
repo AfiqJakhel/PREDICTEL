@@ -5,28 +5,28 @@ import { TeamFocusCards } from "../components/ui/TeamFocusCard";
 function AboutUsPage() {
   const teamMembers = [
     {
-      name: "Ahmad Fauzi",
-      nim: "231152XXXX",
+      name: "Muhammad Afiq Jakhel",
+      nim: "2311523011",
       role: "Full Stack Developer",
       github: "#",
       linkedin: "#",
-      email: "ahmad@example.com",
+      email: "afiqjakhel26@gmail.com",
     },
     {
-      name: "Budi Santoso",
-      nim: "231152XXXX",
+      name: "Andre Putra Dewansyah",
+      nim: "2311523001",
       role: "Data Scientist",
       github: "#",
       linkedin: "#",
-      email: "budi@example.com",
+      email: "Andre@example.com",
     },
     {
-      name: "Citra Dewi",
-      nim: "231152XXXX",
+      name: "Ihsanurrais Pardika",
+      nim: "2311523031",
       role: "UI/UX Designer",
       github: "#",
       linkedin: "#",
-      email: "citra@example.com",
+      email: "ihsan@example.com",
     },
   ];
 
@@ -47,7 +47,7 @@ function AboutUsPage() {
             </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Tim pengembang PREDICTEL - Sistem Prediksi Customer Churn berbasis
+            PREDICTEL - Sistem Prediksi Customer Churn berbasis
             Machine Learning
           </p>
         </div>
