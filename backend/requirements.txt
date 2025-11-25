@@ -1,0 +1,9 @@
+Flask==2.3.3
+Flask-CORS==4.0.0
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+plotly
+python-dotenv==1.0.0
